@@ -1,45 +1,56 @@
-# Etapa 1: Construcción de dependencias
-FROM php:8.2-fpm as builder
-
-# Instalar dependencias del sistema y extensiones necesarias
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev libssl-dev \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip soap
-
-# Instalar Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Crear directorio de la app
-WORKDIR /var/www/html
-
-# Copiar archivos del proyecto
-COPY . .
-
-# Instalar dependencias de Laravel sin dev
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-# Generar cachés de Laravel
-RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
-
-# Etapa 2: Imagen final para producción
+# Imagen base PHP con FPM (FastCGI Process Manager)
 FROM php:8.2-fpm
 
-# Instalar dependencias del sistema y extensiones necesarias
+# Instalación de extensiones del sistema requeridas y Nginx
 RUN apt-get update && apt-get install -y \
-    libpng-dev libonig-dev libxml2-dev libzip-dev libssl-dev unzip zip curl \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip soap \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    libzip-dev \
+    unzip \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    nginx \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        soap
 
-WORKDIR /var/www/html
+# Instala Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copiar el build desde la primera etapa
-COPY --from=builder /var/www/html /var/www/html
+# Directorio de trabajo
+WORKDIR /var/www
 
-# Permisos para Laravel
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Copiar archivos de dependencias para cache layer
+COPY composer.json composer.lock ./
 
-EXPOSE 8000
+# Copiar resto del código
+COPY . .
 
-CMD ["php-fpm"]
-# Comando de inicio
-#CMD php artisan serve --host=0.0.0.0 --port=8000
+# Instalar dependencias sin dev y optimizar autoloaders
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
+    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
+# Crear enlace simbólico entre storage/app/public y public/storage
+RUN php artisan storage:link || true
+
+# Copiar configuración Nginx para Laravel
+COPY nginx.conf /etc/nginx/sites-available/default
+
+# Exponer puertos Nginx y php-fpm
+EXPOSE 80 9000
+
+# Ejecutar PHP-FPM y Nginx en primer plano (con supervisord o en background)
+CMD service nginx start && php-fpm

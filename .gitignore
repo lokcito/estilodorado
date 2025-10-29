@@ -22,7 +22,15 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-storage/certs/cert.pem
-storage/certs/key.pem
-/storage/certs/*.pem
-/storage/certs/*.pfx
+
+# === Ignorar toda la carpeta storage excepto las siguientes ===
+/storage/*
+!/storage/certs/
+!/storage/certs/*.pem
+!/storage/certs/*.pfx
+
+# Mantener comprobantes de prueba (Greenter)
+!/storage/app/
+!/storage/app/public/
+!/storage/app/public/comprobantes/
+!/storage/app/public/comprobantes/**
