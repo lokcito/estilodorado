@@ -1,10 +1,10 @@
 # Etapa 1: Construcción de dependencias
 FROM php:8.2-fpm as builder
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema y extensiones necesarias
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev libssl-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip soap
 
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -24,10 +24,10 @@ RUN php artisan config:cache && php artisan route:cache && php artisan view:cach
 # Etapa 2: Imagen final para producción
 FROM php:8.2-fpm
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema y extensiones necesarias
 RUN apt-get update && apt-get install -y \
-    libpng-dev libonig-dev libxml2-dev libzip-dev unzip zip curl \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    libpng-dev libonig-dev libxml2-dev libzip-dev libssl-dev unzip zip curl \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip soap \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
