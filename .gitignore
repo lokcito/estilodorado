@@ -34,3 +34,4 @@ Thumbs.db
 !/storage/app/public/
 !/storage/app/public/comprobantes/
 !/storage/app/public/comprobantes/**
+!/storage/app/public/comprobantes/**/*
