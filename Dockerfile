@@ -38,6 +38,9 @@ COPY . .
 # Instalar dependencias sin dev y optimizar autoloaders
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
+    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
 # Copiar configuración Nginx para Laravel
 COPY nginx.conf /etc/nginx/sites-available/default
 
